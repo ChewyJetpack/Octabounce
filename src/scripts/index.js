@@ -71,16 +71,25 @@ WebMidi.enable(function (err) {
             tickTimes.push(tickStart);
 
             if (tickCounter > 1) {
+
+                // get the time of the previous tick and calculate the time elapsed before the current tick
                 let lastTick = tickTimes[tickCounter - 1];
                 let currentDiff = tickStart - lastTick;  
+
+                // store the time since the last tick in an array
                 tickDiffs.push(currentDiff);
-                let diffTotal = 0;
-                
+
+                // if the array gets too long, empty it (curretly refreshes once per bar)
                 if (tickDiffs.length > 96) { tickDiffs = []; };
+
+                // calculate the average time between ticks since the last array refresh                
+                let diffTotal = 0;
                 for (let diff = 0; diff < tickDiffs.length; diff++) {
                     diffTotal += tickDiffs[diff];
                     if (diff == tickDiffs.length - 1) {
                         let tickAvg = diffTotal / tickDiffs.length;
+
+                        // once per beat, update the tempo value in the DOM
                         if (tickCounter % 24 === 0) { document.getElementById("tempo").innerHTML = roundBpm(tickAvg); };
                     }
                 }
