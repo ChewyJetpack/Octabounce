@@ -8,6 +8,8 @@ WebMidi.enable(function (err) {
 
         // all midi inputs
         const inputs = WebMidi.inputs;
+        const outputs = WebMidi.outputs;
+        console.log(outputs);
 
         // create array of input names
         const inputNames= [];
@@ -31,8 +33,13 @@ WebMidi.enable(function (err) {
     };
 
     // hard coded midi device - {todo} make this user-selectable
-    const input = WebMidi.getInputByName('Komplete Audio 6 MIDI');
-    const output = WebMidi.getOutputByName('Komplete Audio 6 MIDI');
+    const input = WebMidi.getInputById('981459792');
+    const output = WebMidi.getOutputById('-1764261658');
+
+    console.log(output);
+
+    // test sending a start message
+    output.sendStart();
 
     // listen for 'play'
     input.on('start', "all", (e) => {
@@ -60,7 +67,6 @@ WebMidi.enable(function (err) {
     };
 
     input.on('midimessage', 'all', (e) => {
-
         // get current time
         let tickStart = WebMidi.time;
 
