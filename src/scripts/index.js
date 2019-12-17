@@ -55,18 +55,26 @@ WebMidi.enable(function (err) {
     // });
 
 
-    // detect tempo
+    // tempo detection
     let tickCounter = 0;
     let tickTimes = [];
     let tickDiffs = [];
+
+    // recording midi messages
+    const recording = [];
+
+    // calculate the bpm using the duration of each tick
     const calcBpm = (tick) => {
         return 60000 / (tick * 24);
     };
+
+    // round the bpm to one decimal place
     const roundBpm = (tick) => {
         return Math.round( calcBpm(tick) * 10 ) / 10;
     };
 
     input.on('midimessage', 'all', (e) => {
+
         // get current time
         let tickStart = WebMidi.time;
 
@@ -102,6 +110,17 @@ WebMidi.enable(function (err) {
             };
 
             tickCounter++; 
+        } else {
+
+            // log out non-tick messages for testing 
+            // console.log(e.data);
+
+            // push messages to recording array
+            recording.push(e.data);
+
+            if (recording.length == 100) {
+                console.log(recording);
+            }
         }; 
     });
 
