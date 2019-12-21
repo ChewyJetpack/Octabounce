@@ -36,23 +36,16 @@ WebMidi.enable(function (err) {
     const input = WebMidi.getInputById('981459792');
     const output = WebMidi.getOutputById('-1764261658');
 
-    console.log(output);
+    // console.log(output);
 
-    // test sending a start message
-    output.sendStart();
+    // // test sending a start message
+    // output.sendStart();
 
     // listen for 'play'
     input.on('start', "all", (e) => {
             console.log("Go!");
         }
     );
-
-    // log out all received messages that are not clock messages (decimal 248)
-    // input.on('midimessage', 'all', (e) => {
-    //     if (e.data.length > 1 || e.data[0] !== 248 ) {
-    //         console.log(e.data);
-    //     }
-    // });
 
 
     // tempo detection
@@ -75,11 +68,12 @@ WebMidi.enable(function (err) {
 
     input.on('midimessage', 'all', (e) => {
 
-        // get current time
-        let tickStart = WebMidi.time;
 
         // check only for tick messages (248)
         if (e.data[0] === 248) {
+
+            // get current time
+            let tickStart = WebMidi.time;
             
             // get tick start time, push to array
             tickTimes.push(tickStart);
@@ -113,16 +107,36 @@ WebMidi.enable(function (err) {
         } else {
 
             // log out non-tick messages for testing 
-            // console.log(e.data);
+            //console.log(e.data);
 
             // push messages to recording array
-            recording.push(e.data);
+            // recording.push(e.data);
 
-            if (recording.length == 100) {
-                console.log(recording);
-            }
+            // if (recording.length == 100) {
+            //     console.log(recording);
+            // }
         }; 
     });
+
+    // MIDI event listener
+    const midiChanMsg = [
+        //'noteon',
+        //'noteoff',
+        'controlchange',
+        'pitchbend',
+        'channelmode',
+        'programchange',
+        'pitchbend'
+        // not used:
+        //'keyaftertouch',
+        //'channelaftertouch'
+    ];
+
+    for (let i = 0; i < midiChanMsg.length; i++) {
+        input.addListener(midiChanMsg[i], 'all', (e) => {
+            e.type == 'controlchange' ? console.log(`CC${e.data[1]} ${e.data[2]}, Channel: ${e.channel}`) : onsole.log(`Channel: ${e.channel}, Type: ${e.type}, Data: ${e.data}`);
+        });
+    }
 
 
     // need to write midi data to some kind of storage, ready for play back.
