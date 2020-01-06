@@ -2,7 +2,6 @@ import '../styles/index.scss';
 import WebMidi from "webmidi";
 
 WebMidi.enable(function (err) {
-    console.log('WebMidi is running');
 
     const WebMidiSetup = () => {
 
@@ -31,6 +30,8 @@ WebMidi.enable(function (err) {
         console.log('MIDI_SYSTEM_MESSAGES:');
         console.log(WebMidi.MIDI_SYSTEM_MESSAGES);
     };
+
+    WebMidiSetup();
 
     // hard coded midi device - {todo} make this user-selectable
     const input = WebMidi.getInputById('981459792');
@@ -118,10 +119,13 @@ WebMidi.enable(function (err) {
         }; 
     });
 
+    // array in which to record received MIDI events
+    let recordedEvents = [];
+
     // MIDI event listener
     const midiChanMsg = [
-        //'noteon',
-        //'noteoff',
+        'noteon',
+        'noteoff',
         'controlchange',
         'pitchbend',
         'channelmode',
@@ -132,13 +136,6 @@ WebMidi.enable(function (err) {
         //'channelaftertouch'
     ];
 
-    for (let i = 0; i < midiChanMsg.length; i++) {
-        input.addListener(midiChanMsg[i], 'all', (e) => {
-            e.type == 'controlchange' ? console.log(`CC${e.data[1]} ${e.data[2]}, Channel: ${e.channel}`) : onsole.log(`Channel: ${e.channel}, Type: ${e.type}, Data: ${e.data}`);
-        });
-    }
-
-
     // need to write midi data to some kind of storage, ready for play back.
     // https://github.com/grimmdude/MidiWriterJS
 
@@ -147,6 +144,47 @@ WebMidi.enable(function (err) {
             console.log("Stop!");
         }
     );
+
+    let startTime;
+    let recordingActive = false;
+
+    const record = () => {
+        console.log('recording!');
+        recordingActive = true;
+        let startTime = WebMidi.time;
+        for (let i = 0; i < midiChanMsg.length; i++) {
+            input.addListener(midiChanMsg[i], 'all', (e) => {
+                //e.type == 'controlchange' ? console.log(`Channel: ${e.channel}, CC${e.data[1]} ${e.data[2]}, Time: ${e.timestamp}`) : console.log(`Channel: ${e.channel}, Type: ${e.type}, Data: ${e.data}, Time: ${e.timestamp}, Type: ${e.type}`);
+                if (recordingActive) {
+                    const newTime = (e.timestamp - startTime);
+                    console.log(e.timestamp);
+                    e.timestamp = newTime;
+                    recordedEvents.push(e);
+
+                    console.log(e.timestamp);
+
+                };
+            });
+        };
+    };
+
+    const stopRecording = () => {
+        recordingActive = false;
+        console.log(recordedEvents);
+    };
+
+    // record button
+    document.querySelector('.record').addEventListener('click', () => { record(); });
+
+    // stop button
+    document.querySelector('.stop').addEventListener('click', () => { stopRecording(); });
+
+    // TODO - add other transport buttons, test playback of recorded midi data
     
-    WebMidiSetup();
+    const playback = () => {
+        let startTime = WebMidi.time;
+        for (let i = 0; i < recordedEvents.length; i++) {
+
+        }
+    };
 });
