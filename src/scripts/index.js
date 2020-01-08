@@ -1,61 +1,40 @@
 import '../styles/index.scss';
 import WebMidi from "webmidi";
 
-WebMidi.enable(function (err) {
+const WebMidiSetup = () => {
 
-    const WebMidiSetup = () => {
+    // all midi inputs
+    const inputs = WebMidi.inputs;
+    const outputs = WebMidi.outputs;
+    console.log(outputs);
 
-        // all midi inputs
-        const inputs = WebMidi.inputs;
-        const outputs = WebMidi.outputs;
-        console.log(outputs);
+    // create array of input names
+    const inputNames= [];
+    for (let input = 0; input < inputs.length; input++) {
+        inputNames.push(inputs[input]._midiInput.name);
+    }
 
-        // create array of input names
-        const inputNames= [];
-        for (let input = 0; input < inputs.length; input++) {
-            inputNames.push(inputs[input]._midiInput.name);
-        }
-
-        // useful tools for reference or debugging
-        console.log('MIDI_CHANNEL_MESSAGES:');
-        console.log(WebMidi.MIDI_CHANNEL_MESSAGES);
-        console.log('MIDI_CHANNEL_MODE_MESSAGES:');
-        console.log(WebMidi.MIDI_CHANNEL_MODE_MESSAGES);
-        console.log('MIDI_CONTROL_CHANGE_MESSAGES:');
-        console.log(WebMidi.MIDI_CONTROL_CHANGE_MESSAGES);
-        console.log('MIDI_NRPN_MESSAGES:');
-        console.log(WebMidi.MIDI_NRPN_MESSAGES);
-        console.log('MIDI_REGISTERED_PARAMETER:');
-        console.log(WebMidi.MIDI_REGISTERED_PARAMETER);
-        console.log('MIDI_SYSTEM_MESSAGES:');
-        console.log(WebMidi.MIDI_SYSTEM_MESSAGES);
-    };
-
-    WebMidiSetup();
-
-    // hard coded midi device - {todo} make this user-selectable
-    const input = WebMidi.getInputById('981459792');
-    const output = WebMidi.getOutputById('-1764261658');
-
-    // console.log(output);
-
-    // // test sending a start message
-    // output.sendStart();
-
-    // listen for 'play'
-    input.on('start', "all", (e) => {
-            console.log("Go!");
-        }
-    );
+    // useful tools for reference or debugging
+    console.log('MIDI_CHANNEL_MESSAGES:', WebMidi.MIDI_CHANNEL_MESSAGES);
+    console.log('MIDI_CHANNEL_MODE_MESSAGES:', WebMidi.MIDI_CHANNEL_MODE_MESSAGES);
+    console.log('MIDI_CONTROL_CHANGE_MESSAGES:', WebMidi.MIDI_CONTROL_CHANGE_MESSAGES);
+    console.log('MIDI_NRPN_MESSAGES:', WebMidi.MIDI_NRPN_MESSAGES);
+    console.log('MIDI_REGISTERED_PARAMETER:', WebMidi.MIDI_REGISTERED_PARAMETER);
+    console.log('MIDI_SYSTEM_MESSAGES:', WebMidi.MIDI_SYSTEM_MESSAGES);
+};
 
 
-    // tempo detection
+
+const detectTempo = (input) => {
+
+    // number of ticks elapsed
     let tickCounter = 0;
-    let tickTimes = [];
-    let tickDiffs = [];
 
-    // recording midi messages
-    const recording = [];
+    // tick timestamps
+    let tickTimes = [];
+
+    // time between ticks
+    let tickDiffs = [];
 
     // calculate the bpm using the duration of each tick
     const calcBpm = (tick) => {
@@ -105,22 +84,19 @@ WebMidi.enable(function (err) {
             };
 
             tickCounter++; 
-        } else {
-
-            // log out non-tick messages for testing 
-            //console.log(e.data);
-
-            // push messages to recording array
-            // recording.push(e.data);
-
-            // if (recording.length == 100) {
-            //     console.log(recording);
-            // }
         }; 
     });
+};
 
-    // array in which to record received MIDI events
-    let recordedEvents = [];
+WebMidi.enable((err) => {
+
+    WebMidiSetup();
+
+    // hard coded midi device - {todo} make this user-selectable
+    const input = WebMidi.getInputById('981459792');
+    const output = WebMidi.getOutputById('-1764261658');
+
+    detectTempo(input);
 
     // MIDI event listener
     const midiChanMsg = [
@@ -145,39 +121,42 @@ WebMidi.enable(function (err) {
         }
     );
 
-    let startTime;
-    let recordingActive = false;
-
-    const record = () => {
-        console.log('recording!');
-        recordingActive = true;
-        let startTime = WebMidi.time;
-        for (let i = 0; i < midiChanMsg.length; i++) {
-            input.addListener(midiChanMsg[i], 'all', (e) => {
-                //e.type == 'controlchange' ? console.log(`Channel: ${e.channel}, CC${e.data[1]} ${e.data[2]}, Time: ${e.timestamp}`) : console.log(`Channel: ${e.channel}, Type: ${e.type}, Data: ${e.data}, Time: ${e.timestamp}, Type: ${e.type}`);
-                if (recordingActive) {
-                    const newTime = (e.timestamp - startTime);
-                    console.log(e.timestamp);
-                    e.timestamp = newTime;
-                    recordedEvents.push(e);
-
-                    console.log(e.timestamp);
-
-                };
-            });
-        };
-    };
-
-    const stopRecording = () => {
-        recordingActive = false;
-        console.log(recordedEvents);
+    // trying out OLOO
+    const recordMIDI = {
+        recordingActive: false,
+        startTime: WebMidi.time,
+        // array in which to record received MIDI events
+        recordedEvents: [],
+        run: () => {
+            console.log('recording!');
+            recordMIDI.recordingActive = true;
+            for (let i = 0; i < midiChanMsg.length; i++) {
+                input.addListener(midiChanMsg[i], 'all', (e) => {
+                    if (this.recordingActive) {
+                        this.newTime = (e.timestamp - startTime);
+                        console.log(e.timestamp);
+                        e.timestamp = this.newTime;
+                        recordedEvents.push(e);
+                        console.log(e.timestamp);
+                    };
+                });
+            };
+        },
+        stopRecording: () => {
+            if (this.recordingActive) { console.log(`Recording complete!`, this.recordedEvents); }; 
+            this.recordingActive = false;
+        }
     };
 
     // record button
-    document.querySelector('.record').addEventListener('click', () => { record(); });
+    document.querySelector('.record').addEventListener('click', () => { recordMIDI.run(); });
+    // listen for 'play'
+    input.on('start', "all", () => {  recordMIDI.run();  });
 
     // stop button
-    document.querySelector('.stop').addEventListener('click', () => { stopRecording(); });
+    document.querySelector('.stop').addEventListener('click', () => { recordMIDI.stopRecording(); });
+    // listen for 'play'
+    input.on('stop', "all", () => {  recordMIDI.stopRecording();  });
 
     // TODO - add other transport buttons, test playback of recorded midi data
     
