@@ -115,24 +115,46 @@ WebMidi.enable((err) => {
     // need to write midi data to some kind of storage, ready for play back.
     // https://github.com/grimmdude/MidiWriterJS
 
-    // listen for 'stop
-    input.on('stop', "all", (e) => {
-            console.log("Stop!");
-        }
-    );
+    const dataPool = {
+        status: 'waiting',
+        recordedEvents: []
+    };
 
-    // trying out OLOO
+    const helpers = {        
+        updateStatus: (status) => {
+            const statusMsg = document.getElementById('status');
+            switch (status) {
+                case 'recording':
+                    dataPool.status = 'recording';
+                    statusMsg.innerHTML = `Press the stop button when you're finished.`;
+                break;
+                case 'stopped':
+                    dataPool.status = 'stopped';
+                    statusMsg.innerHTML = `Ready to bounce! To clear your recording, press the stop button again.`;
+                break;
+                default:
+                    dataPool.status = 'waiting';
+                    statusMsg.innerHTML = `Press the play button to start recording your performance.`;
+                break;
+            }
+        }
+    };
+
+    // functions related to the recording of MIDI data
     const recordMIDI = {
-        recordingActive: false,
-        startTime: WebMidi.time,
-        // array in which to record received MIDI events
-        recordedEvents: [],
         run: () => {
-            console.log('recording!');
-            recordMIDI.recordingActive = true;
+            // log the time the recording was started
+            const startTime = WebMidi.time;
+
+            // update the status
+            helpers.updateStatus('recording');
+
+            // loop through all midi message types we want to record, and add listeners for each, to record the messages
             for (let i = 0; i < midiChanMsg.length; i++) {
                 input.addListener(midiChanMsg[i], 'all', (e) => {
-                    if (this.recordingActive) {
+
+                    // if recording is active, get the message data, set the correct timestamp, and push to the array
+                    if (status == 'recording') {
                         this.newTime = (e.timestamp - startTime);
                         console.log(e.timestamp);
                         e.timestamp = this.newTime;
@@ -143,26 +165,30 @@ WebMidi.enable((err) => {
             };
         },
         stopRecording: () => {
-            if (this.recordingActive) { console.log(`Recording complete!`, this.recordedEvents); }; 
-            this.recordingActive = false;
+            if (dataPool.status == 'recording') { console.log(dataPool.recordedEvents); }; 
+            helpers.updateStatus('stopped');
+        },
+        resetRecording: () => {
+            dataPool.recordedEvents = [];
+            helpers.updateStatus('waiting');
         }
     };
 
-    // record button
-    document.querySelector('.record').addEventListener('click', () => { recordMIDI.run(); });
     // listen for 'play'
-    input.on('start', "all", () => {  recordMIDI.run();  });
+    input.on('start', "all", () => {  
+        recordMIDI.run(); 
+    });
 
-    // stop button
-    document.querySelector('.stop').addEventListener('click', () => { recordMIDI.stopRecording(); });
     // listen for 'play'
-    input.on('stop', "all", () => {  recordMIDI.stopRecording();  });
+    input.on('stop', "all", () => {  
+        dataPool.status == 'recording' ? recordMIDI.stopRecording() : recordMIDI.resetRecording();
+    });
 
     // TODO - add other transport buttons, test playback of recorded midi data
     
     const playback = () => {
         let startTime = WebMidi.time;
-        for (let i = 0; i < recordedEvents.length; i++) {
+        for (let i = 0; i < dataPool.recordedEvents.length; i++) {
 
         }
     };
